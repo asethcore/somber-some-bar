@@ -859,9 +859,7 @@ PanelWindow {
 
         Row {
             id: wsRow
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: 6
+            anchors.centerIn: parent
             spacing: 6
 
             Repeater {
@@ -910,9 +908,7 @@ PanelWindow {
 
         Row {
             id: sysRow
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: 6
+            anchors.centerIn: parent
             spacing: 6
 
             Item {
@@ -1068,6 +1064,29 @@ PanelWindow {
                         root.showVolPopup()
                     } else if (m === "brightness") {
                         root.showBrightPopup()
+                    } else if (m.indexOf("view") === 0) {
+                        const n = parseInt(m.slice(4), 10)
+                        if (!isNaN(n) && n >= 0 && n <= 5) {
+                            connectivityMenu.open = false
+                            appDrawer.open = false
+                            root.expandView = n
+                            root.expand = 1
+                        }
+                    } else if (m === "collapse") {
+                        root.expand = 0
+                        root.expandView = 0
+                    } else if (m === "wifi") {
+                        root.expand = 0
+                        appDrawer.open = false
+                        connectivityMenu.mode = 0
+                        connectivityMenu.reset()
+                        connectivityMenu.open = true
+                    } else if (m === "bluetooth") {
+                        root.expand = 0
+                        appDrawer.open = false
+                        connectivityMenu.mode = 1
+                        connectivityMenu.reset()
+                        connectivityMenu.open = true
                     }
                 }
             }

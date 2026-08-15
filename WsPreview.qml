@@ -1,3 +1,4 @@
+import Quickshell.Io
 import QtQuick
 import Quickshell.Widgets
 
@@ -40,6 +41,52 @@ Item {
     readonly property real scaleX: root.bounds ? root.width / root.bounds.w : 1
     readonly property real scaleY: root.bounds ? root.height / root.bounds.h : 1
 
+    readonly property var iconSet: {
+        const s = new Set()
+        for (const n of root.iconNames) s.add(n)
+        return s
+    }
+
+    property var iconNames: []
+
+    function iconPath(cls) {
+        if (!cls) return ""
+        const base = "/run/current-system/sw/share/icons/hicolor/128x128/apps/"
+        const candidates = []
+        const known = {
+            "Spotify": "spotify-client",
+            "spotify": "spotify-client"
+        }
+        if (known[cls]) candidates.push(known[cls])
+        candidates.push(cls)
+        candidates.push(cls.toLowerCase())
+        candidates.push(cls.replace(/\./g, "-").toLowerCase())
+        const seen = {}
+        for (const c of candidates) {
+            if (!c || seen[c]) continue
+            seen[c] = true
+            if (root.iconSet.has(c)) return "file://" + base + c + ".png"
+        }
+        return ""
+    }
+
+    Process {
+        id: iconScan
+        command: ["sh", "-c", "ls /run/current-system/sw/share/icons/hicolor/128x128/apps/ 2>/dev/null | sed 's/\\.png$//'"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const names = []
+                const lines = String(this.text).split("\n")
+                for (const line of lines) {
+                    const n = line.trim()
+                    if (n !== "") names.push(n)
+                }
+                root.iconNames = names
+            }
+        }
+    }
+
     Repeater {
         model: root.tiled
 
@@ -61,7 +108,7 @@ Item {
                 width: root.iconSize
                 height: root.iconSize
                 visible: parent.width >= root.iconSize + 10 && parent.height >= root.iconSize + 10
-                source: "file:///run/current-system/sw/share/icons/hicolor/128x128/apps/" + modelData.class + ".png"
+                source: root.iconPath(modelData.class)
             }
         }
     }
