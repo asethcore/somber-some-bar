@@ -212,16 +212,18 @@ PanelWindow {
         const bodyH = (root.notifBody !== "" && root.notifSummary !== "") ? bodyProbe.height + 2 : 0
         const colH = appH + 2 + summaryH + 2 + bodyH
         const contentH = Math.max(26, colH)
-        return Math.min(220, Math.max(84, 32 + contentH))
+        return Math.min(220, Math.max(64, 32 + contentH))
     }
 
     function pillTargetW() {
         if (root.notifVisible && root.expand < 0.5) return root.notifPopupW
+        if ((root.volPopupVisible || root.brightPopupVisible) && root.expand < 0.5) return 330
         return root.expand > 0.5 ? root.expandWidth() : root.collapsedW
     }
 
     function pillTargetH() {
         if (root.notifVisible && root.expand < 0.5) return root.notifPopupHeight()
+        if ((root.volPopupVisible || root.brightPopupVisible) && root.expand < 0.5) return 60
         return root.expand > 0.5 ? root.expandHeight() : 44
     }
 
@@ -362,6 +364,37 @@ PanelWindow {
         else root.volBars = 4
     }
 
+    property int brightPct: -1
+    property bool brightAvailable: false
+
+    function parseBright(text) {
+        const v = parseFloat(text.trim())
+        if (!isNaN(v)) {
+            root.brightPct = Math.max(0, Math.min(100, Math.round(v)))
+            root.brightAvailable = true
+        }
+    }
+
+    Process {
+        id: brightProcess
+        command: ["sh", "-c", "b=$(cat /sys/class/backlight/*/brightness 2>/dev/null | head -1); m=$(cat /sys/class/backlight/*/max_brightness 2>/dev/null | head -1); if [ -n \"$b\" ] && [ -n \"$m\" ] && [ \"$m\" -gt 0 ]; then echo $((b * 100 / m)); fi"]
+        running: true
+        onRunningChanged: {
+            if (!running) {
+                brightRestart.start()
+            }
+        }
+        stdout: StdioCollector {
+            onStreamFinished: root.parseBright(this.text)
+        }
+    }
+
+    Timer {
+        id: brightRestart
+        interval: 2000
+        onTriggered: brightProcess.running = true
+    }
+
     Process {
         id: volProcess
         command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
@@ -401,7 +434,7 @@ PanelWindow {
 
             Text {
                 anchors.centerIn: parent
-                opacity: (root.showMedia || root.notifVisible) ? 0 : 1
+                opacity: (root.showMedia || root.notifVisible || root.volPopupVisible || root.brightPopupVisible) ? 0 : 1
                 visible: opacity > 0
                 width: parent.width - 96
                 horizontalAlignment: Text.AlignHCenter
@@ -481,6 +514,106 @@ PanelWindow {
                 }
             }
 
+            Item {
+                id: volBar
+                anchors.fill: parent
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                opacity: (root.volPopupVisible && !root.notifVisible) ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutQuad } }
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.volMuted ? "\uf026" : (root.volPct >= 50 ? "\uf028" : "\uf027")
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 16
+                        color: "#FFFFFF"
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.volMuted ? "Muted" : root.volPct + "%"
+                        color: "#FFFFFF"
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
+
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 120
+                        height: 6
+                        radius: 3
+                        color: "#3A352C"
+
+                        Rectangle {
+                            width: parent.width * Math.max(0, Math.min(1, root.volPct / 100))
+                            height: parent.height
+                            radius: 3
+                            color: "#5E86E0"
+
+                            Behavior on width {
+                                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: brightBar
+                anchors.fill: parent
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                opacity: (root.brightPopupVisible && !root.notifVisible && !root.volPopupVisible) ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutQuad } }
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "\uf185"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 16
+                        color: "#FFFFFF"
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.brightPct >= 0 ? root.brightPct + "%" : "--%"
+                        color: "#FFFFFF"
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
+
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 120
+                        height: 6
+                        radius: 3
+                        color: "#3A352C"
+
+                        Rectangle {
+                            width: parent.width * Math.max(0, Math.min(1, root.brightPct / 100))
+                            height: parent.height
+                            radius: 3
+                            color: "#5E86E0"
+
+                            Behavior on width {
+                                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                            }
+                        }
+                    }
+                }
+            }
+
             Rectangle {
                 id: mediaBar
                 anchors.fill: parent
@@ -488,7 +621,7 @@ PanelWindow {
                 anchors.rightMargin: 14
                 anchors.topMargin: 6
                 anchors.bottomMargin: 6
-                opacity: (root.showMedia && !root.notifVisible) ? 1 : 0
+                opacity: (root.showMedia && !root.notifVisible && !root.volPopupVisible && !root.brightPopupVisible) ? 1 : 0
                 visible: opacity > 0
                 Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutQuad } }
                 radius: height / 2
@@ -927,9 +1060,14 @@ PanelWindow {
         handler: Socket {
             parser: SplitParser {
                 onRead: (message) => {
-                    if (message.trim() === "toggle") {
+                    const m = message.trim()
+                    if (m === "toggle") {
                         connectivityMenu.open = false
                         appDrawer.open = !appDrawer.open
+                    } else if (m === "volume") {
+                        root.showVolPopup()
+                    } else if (m === "brightness") {
+                        root.showBrightPopup()
                     }
                 }
             }
@@ -964,6 +1102,29 @@ PanelWindow {
     property string notifBody: ""
     property bool notifVisible: false
 
+    property bool volPopupVisible: false
+    property bool brightPopupVisible: false
+
+    function showVolPopup() {
+        root.volPopupVisible = true
+        volPopupHideTimer.restart()
+        if (!volProcess.running) {
+            volProcess.running = true
+        }
+        volRestart.stop()
+        volRestart.start()
+    }
+
+    function showBrightPopup() {
+        root.brightPopupVisible = true
+        brightPopupHideTimer.restart()
+        if (!brightProcess.running) {
+            brightProcess.running = true
+        }
+        brightRestart.stop()
+        brightRestart.start()
+    }
+
     function pushNotification(appName, summary, body, ref) {
         notificationHistory.append({ appName: appName, summary: summary, body: body, ref: ref })
         while (notificationHistory.count > 30) notificationHistory.remove(0)
@@ -995,5 +1156,17 @@ PanelWindow {
         id: notifHideTimer
         interval: 4000
         onTriggered: root.notifVisible = false
+    }
+
+    Timer {
+        id: volPopupHideTimer
+        interval: 1500
+        onTriggered: root.volPopupVisible = false
+    }
+
+    Timer {
+        id: brightPopupHideTimer
+        interval: 1500
+        onTriggered: root.brightPopupVisible = false
     }
 }
