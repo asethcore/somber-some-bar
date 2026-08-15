@@ -29,13 +29,17 @@ project is distributed under the same spirit of open, hackable desktop software.
 
 | Workspaces | Media | Timer |
 |---|---|---|
-| ![Workspaces](https://via.placeholder.com/440x180?text=view0+-+Workspaces) | ![Media](https://via.placeholder.com/440x160?text=view1+-+Media) | ![Timer](https://via.placeholder.com/440x180?text=view2+-+Timer) |
+| ![Workspaces](screenshots/view0.png) | ![Media](screenshots/view1.png) | ![Timer](screenshots/view2.png) |
 
 | Wallpapers | Notifications | Control Center |
 |---|---|---|
-| ![Wallpapers](https://via.placeholder.com/440x288?text=view3+-+Wallpapers) | ![Notifications](https://via.placeholder.com/380x300?text=view4+-+Notifications) | ![Control Center](https://via.placeholder.com/420x336?text=view5+-+Control+Center) |
+| ![Wallpapers](screenshots/view3.png) | ![Notifications](screenshots/view4.png) | ![Control Center](screenshots/view5.png) |
 
-> Preview images can be generated with the IPC commands (see *Common Commands*).
+| Volume OSD | Brightness OSD | Notification Popup |
+|---|---|---|
+| ![Volume](screenshots/popup-volume.png) | ![Brightness](screenshots/popup-brightness.png) | ![Notification](screenshots/popup-notification.png) |
+
+> Screenshots are regenerable via the IPC commands (see *Common Commands*).
 
 ---
 
