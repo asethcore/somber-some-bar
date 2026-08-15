@@ -24,6 +24,10 @@ Item {
         return ""
     }
 
+    function refresh() {
+        canvas.requestPaint()
+    }
+
     Image {
         id: artImg
         visible: true
@@ -32,8 +36,51 @@ Item {
         source: root.resolved
         asynchronous: true
         sourceSize: Qt.size(512, 512)
-        onStatusChanged: canvas.requestPaint()
+        onStatusChanged: {
+            canvas.requestPaint()
+            if (artImg.status === Image.Ready) artLoadTimer.stop()
+        }
         onSourceChanged: canvas.requestPaint()
+    }
+
+    onArtUrlChanged: {
+        artLoadTimer.restart()
+        canvas.requestPaint()
+    }
+    onTrackUrlChanged: {
+        artLoadTimer.restart()
+        canvas.requestPaint()
+    }
+    onResolvedChanged: {
+        artLoadTimer.restart()
+        canvas.requestPaint()
+    }
+
+    onVisibleChanged: {
+        if (root.visible) {
+            artLoadTimer.restart()
+            canvas.requestPaint()
+        }
+    }
+
+    Timer {
+        id: artLoadTimer
+        interval: 100
+        repeat: true
+        running: root.visible && root.resolved !== "" && artImg.status !== Image.Ready
+        onTriggered: canvas.requestPaint()
+    }
+
+    Timer {
+        id: artRetry
+        interval: 4000
+        repeat: true
+        running: root.resolved !== "" && (artImg.status === Image.Error || artImg.status === Image.Null)
+        onTriggered: {
+            const cur = artImg.source
+            artImg.source = ""
+            artImg.source = cur
+        }
     }
 
     Canvas {
@@ -64,18 +111,6 @@ Item {
                 ctx.drawImage(artImg, (width - dw) / 2, (height - dh) / 2, dw, dh)
                 ctx.restore()
             }
-        }
-    }
-
-    Timer {
-        id: artRetry
-        interval: 4000
-        repeat: true
-        running: root.resolved !== "" && (artImg.status === Image.Error || artImg.status === Image.Null)
-        onTriggered: {
-            const cur = artImg.source
-            artImg.source = ""
-            artImg.source = cur
         }
     }
 
