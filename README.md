@@ -117,7 +117,7 @@ Quickshell services used: `Quickshell.Hyprland`, `.Networking`, `.Bluetooth`,
 ### 1. Clone the bar
 
 ```sh
-git clone <your-repo-url> ~/quickshell-bar
+git clone https://github.com/asethcore/some-bar.git ~/quickshell-bar
 ```
 
 ### 2. Install dependencies
