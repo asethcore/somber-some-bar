@@ -434,7 +434,7 @@ PanelWindow {
 
             Text {
                 anchors.centerIn: parent
-                opacity: (root.showMedia || root.notifVisible || root.volPopupVisible || root.brightPopupVisible) ? 0 : 1
+                opacity: root.notifVisible || root.volPopupVisible || root.brightPopupVisible ? 0 : 1
                 visible: opacity > 0
                 width: parent.width - 96
                 horizontalAlignment: Text.AlignHCenter

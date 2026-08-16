@@ -271,18 +271,30 @@ Item {
     }
 
     function launchRow(row) {
-        if (row.type === "app") {
-            if (row.app) row.app.execute()
-        } else if (row.type === "file") {
-            Quickshell.execDetached(["nautilus", row.path])
-        } else if (row.type === "math") {
-            Quickshell.clipboardText = root.fmtResult(row.result)
-        }
         root.open = false
+        launchTimer.payload = row
+        launchTimer.restart()
     }
 
     function launchFirst() {
         if (root.items.length > 0) root.launchRow(root.items[0])
+    }
+
+    Timer {
+        id: launchTimer
+        interval: 80
+        property var payload: null
+        onTriggered: {
+            if (!payload) return
+            const row = payload
+            if (row.type === "app") {
+                if (row.app) row.app.execute()
+            } else if (row.type === "file") {
+                Quickshell.execDetached(["nautilus", row.path])
+            } else if (row.type === "math") {
+                Quickshell.clipboardText = root.fmtResult(row.result)
+            }
+        }
     }
 
     Shape {
