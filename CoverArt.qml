@@ -38,7 +38,10 @@ Item {
         sourceSize: Qt.size(512, 512)
         onStatusChanged: {
             canvas.requestPaint()
-            if (artImg.status === Image.Ready) artLoadTimer.stop()
+            if (artImg.status === Image.Ready) {
+                artLoadTimer.stop()
+                paintSettle.restart()
+            }
         }
         onSourceChanged: canvas.requestPaint()
     }
@@ -46,6 +49,7 @@ Item {
     onArtUrlChanged: {
         artLoadTimer.restart()
         canvas.requestPaint()
+        paintSettle.restart()
     }
     onTrackUrlChanged: {
         artLoadTimer.restart()
@@ -60,6 +64,7 @@ Item {
         if (root.visible) {
             artLoadTimer.restart()
             canvas.requestPaint()
+            paintSettle.restart()
         }
     }
 
@@ -81,6 +86,12 @@ Item {
             artImg.source = ""
             artImg.source = cur
         }
+    }
+
+    Timer {
+        id: paintSettle
+        interval: 150
+        onTriggered: canvas.requestPaint()
     }
 
     Canvas {

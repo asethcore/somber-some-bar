@@ -16,7 +16,7 @@ Item {
         const out = []
         for (const c of root.clients) {
             if (c.workspace && c.workspace.id === root.wsId
-                    && c.mapped && !c.hidden && !c.floating) {
+                    && c.mapped && !c.hidden) {
                 out.push(c)
             }
         }
@@ -41,17 +41,42 @@ Item {
     readonly property real scaleX: root.bounds ? root.width / root.bounds.w : 1
     readonly property real scaleY: root.bounds ? root.height / root.bounds.h : 1
 
-    readonly property var iconSet: {
-        const s = new Set()
-        for (const n of root.iconNames) s.add(n)
-        return s
+    property var iconIndex: ({})
+
+    function iconPrio(p, ext) {
+        let pr = 50
+        if (p.indexOf("/128x128/") !== -1) pr = 100
+        else if (p.indexOf("/128x128@2/") !== -1) pr = 95
+        else if (p.indexOf("/256x256/") !== -1) pr = 80
+        else if (p.indexOf("/512x512/") !== -1) pr = 70
+        if (ext === "png") pr += 5
+        return pr
     }
 
-    property var iconNames: []
+    function buildIconIndex(text) {
+        const map = {}
+        const lines = String(text).split("\n")
+        for (const line of lines) {
+            const p = line.trim()
+            if (p.length < 5 || p.charAt(0) !== "/") continue
+            const slash = p.lastIndexOf("/")
+            const file = p.slice(slash + 1)
+            const dot = file.lastIndexOf(".")
+            if (dot <= 0) continue
+            const base = file.slice(0, dot)
+            const ext = file.slice(dot + 1)
+            if (ext !== "png" && ext !== "svg") continue
+            if (!map[base]) map[base] = []
+            map[base].push({ path: p, prio: root.iconPrio(p, ext) })
+        }
+        for (const k in map) {
+            map[k].sort((a, b) => b.prio - a.prio)
+        }
+        root.iconIndex = map
+    }
 
     function iconPath(cls) {
         if (!cls) return ""
-        const base = "/run/current-system/sw/share/icons/hicolor/128x128/apps/"
         const candidates = []
         const known = {
             "Spotify": "spotify-client",
@@ -65,25 +90,18 @@ Item {
         for (const c of candidates) {
             if (!c || seen[c]) continue
             seen[c] = true
-            if (root.iconSet.has(c)) return "file://" + base + c + ".png"
+            const entries = root.iconIndex[c]
+            if (entries && entries.length > 0) return "file://" + entries[0].path
         }
         return ""
     }
 
     Process {
         id: iconScan
-        command: ["sh", "-c", "ls /run/current-system/sw/share/icons/hicolor/128x128/apps/ 2>/dev/null | sed 's/\\.png$//'"]
+        command: ["sh", "-c", "find /run/current-system/sw/share/icons/hicolor -mindepth 3 -maxdepth 3 \\( -type f -o -type l \\) \\( -iname '*.png' -o -iname '*.svg' \\) ! -path '*/symbolic/*' 2>/dev/null"]
         running: true
         stdout: StdioCollector {
-            onStreamFinished: {
-                const names = []
-                const lines = String(this.text).split("\n")
-                for (const line of lines) {
-                    const n = line.trim()
-                    if (n !== "") names.push(n)
-                }
-                root.iconNames = names
-            }
+            onStreamFinished: root.buildIconIndex(this.text)
         }
     }
 

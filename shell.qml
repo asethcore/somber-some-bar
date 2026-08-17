@@ -439,7 +439,11 @@ PanelWindow {
                 width: parent.width - 96
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
-                text: ToplevelManager.activeToplevel ? ToplevelManager.activeToplevel.title : "hyprland"
+                text: {
+                    const t = ToplevelManager.activeToplevel ? ToplevelManager.activeToplevel.title : ""
+                    if (t === "~") return "terminal illness"
+                    return t || "hyprland"
+                }
                 color: "#FFFFFF"
                 font.pixelSize: 14
                 Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutQuad } }
