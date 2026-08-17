@@ -208,12 +208,28 @@ Item {
         return out
     }
 
+    readonly property var powerActions: [
+        { key: "shutdown", label: "Power Off", search: "shutdown power off", icon: "\uf011", run: ["systemctl", "poweroff"] },
+        { key: "restart", label: "Restart", search: "restart reboot", icon: "\uf021", run: ["systemctl", "reboot"] },
+        { key: "lock", label: "Lock Screen", search: "lock screen", icon: "\uf023", run: ["hyprlock"] },
+        { key: "sleep", label: "Sleep", search: "sleep suspend", icon: "\uf0904", run: ["systemctl", "suspend"] },
+        { key: "hibernate", label: "Hibernate", search: "hibernate", icon: "\uf0717", run: ["systemctl", "hibernate"] }
+    ]
+
     readonly property var items: {
         const q = searchInput.text.trim()
         const out = []
         if (q.length > 0) {
             const m = root.tryMath(q)
             if (m !== null) out.push({ type: "math", expr: q, result: m })
+        }
+        if (q.length > 0) {
+            const lower = q.toLowerCase()
+            for (const p of root.powerActions) {
+                if ((p.label + " " + p.search).toLowerCase().indexOf(lower) !== -1) {
+                    out.push({ type: "power", power: p })
+                }
+            }
         }
         const apps = root.filterApps(q)
         const appLimit = q.length === 0 ? 60 : 6
@@ -247,12 +263,14 @@ Item {
     function rowTitle(row) {
         if (row.type === "math") return row.expr + " = " + root.fmtResult(row.result)
         if (row.type === "file") return row.name
+        if (row.type === "power") return row.power ? row.power.label : ""
         if (row.type === "app") return row.app ? (row.app.name || row.app.id || "") : ""
         return ""
     }
 
     function rowSubtitle(row) {
         if (row.type === "file") return row.path
+        if (row.type === "power") return row.power ? row.power.run.join(" ") : ""
         if (row.type === "app") return row.app ? (row.app.genericName || "") : ""
         return ""
     }
@@ -266,6 +284,7 @@ Item {
     function rowFallback(row) {
         if (row.type === "math") return "\uf1ec"
         if (row.type === "file") return "\uf07b"
+        if (row.type === "power") return row.power ? row.power.icon : "?"
         if (row.type === "app") return row.app && row.app.name ? row.app.name.charAt(0).toUpperCase() : "?"
         return "?"
     }
@@ -293,6 +312,8 @@ Item {
                 Quickshell.execDetached(["nautilus", row.path])
             } else if (row.type === "math") {
                 Quickshell.clipboardText = root.fmtResult(row.result)
+            } else if (row.type === "power") {
+                if (row.power) Quickshell.execDetached(row.power.run)
             }
         }
     }

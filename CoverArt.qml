@@ -1,3 +1,4 @@
+import Quickshell.Widgets
 import QtQuick
 
 Item {
@@ -25,103 +26,23 @@ Item {
     }
 
     function refresh() {
-        canvas.requestPaint()
+        const cur = artImg.source
+        artImg.source = ""
+        artImg.source = cur
     }
 
-    Image {
-        id: artImg
-        visible: true
-        opacity: 0
+    ClippingRectangle {
         anchors.fill: parent
-        source: root.resolved
-        asynchronous: true
-        sourceSize: Qt.size(512, 512)
-        onStatusChanged: {
-            canvas.requestPaint()
-            if (artImg.status === Image.Ready) {
-                artLoadTimer.stop()
-                paintSettle.restart()
-            }
-        }
-        onSourceChanged: canvas.requestPaint()
-    }
+        radius: root.radius
+        color: root.bgColor
 
-    onArtUrlChanged: {
-        artLoadTimer.restart()
-        canvas.requestPaint()
-        paintSettle.restart()
-    }
-    onTrackUrlChanged: {
-        artLoadTimer.restart()
-        canvas.requestPaint()
-    }
-    onResolvedChanged: {
-        artLoadTimer.restart()
-        canvas.requestPaint()
-    }
-
-    onVisibleChanged: {
-        if (root.visible) {
-            artLoadTimer.restart()
-            canvas.requestPaint()
-            paintSettle.restart()
-        }
-    }
-
-    Timer {
-        id: artLoadTimer
-        interval: 100
-        repeat: true
-        running: root.visible && root.resolved !== "" && artImg.status !== Image.Ready
-        onTriggered: canvas.requestPaint()
-    }
-
-    Timer {
-        id: artRetry
-        interval: 4000
-        repeat: true
-        running: root.resolved !== "" && (artImg.status === Image.Error || artImg.status === Image.Null)
-        onTriggered: {
-            const cur = artImg.source
-            artImg.source = ""
-            artImg.source = cur
-        }
-    }
-
-    Timer {
-        id: paintSettle
-        interval: 150
-        onTriggered: canvas.requestPaint()
-    }
-
-    Canvas {
-        id: canvas
-        anchors.fill: parent
-        renderTarget: Canvas.Image
-
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.clearRect(0, 0, width, height)
-            const r = Math.min(root.radius, width / 2, height / 2)
-            ctx.beginPath()
-            ctx.moveTo(r, 0)
-            ctx.arcTo(width, 0, width, height, r)
-            ctx.arcTo(width, height, 0, height, r)
-            ctx.arcTo(0, height, 0, 0, r)
-            ctx.arcTo(0, 0, width, 0, r)
-            ctx.closePath()
-            ctx.fillStyle = root.bgColor
-            ctx.fill()
-            if (artImg.status === Image.Ready && artImg.sourceSize.width > 0 && artImg.sourceSize.height > 0) {
-                ctx.clip()
-                const iw = artImg.sourceSize.width
-                const ih = artImg.sourceSize.height
-                const s = Math.max(width / iw, height / ih)
-                const dw = iw * s
-                const dh = ih * s
-                ctx.drawImage(artImg, (width - dw) / 2, (height - dh) / 2, dw, dh)
-                ctx.restore()
-            }
+        Image {
+            id: artImg
+            anchors.fill: parent
+            asynchronous: true
+            fillMode: Image.PreserveAspectCrop
+            sourceSize: Qt.size(512, 512)
+            source: root.resolved
         }
     }
 
@@ -132,5 +53,13 @@ Item {
         font.pixelSize: parent.width * 0.4
         color: "#959187"
         visible: artImg.status !== Image.Ready
+    }
+
+    Timer {
+        id: artRetry
+        interval: 4000
+        repeat: true
+        running: root.resolved !== "" && (artImg.status === Image.Error || artImg.status === Image.Null)
+        onTriggered: root.refresh()
     }
 }

@@ -3,6 +3,7 @@ import Quickshell.Bluetooth
 import Quickshell.Io
 import Quickshell.Networking
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Shapes
 
 Item {
@@ -47,7 +48,7 @@ Item {
     readonly property var earOut: root.earR * 2.75
     readonly property var earDown: root.earR * 0.9
 
-    readonly property real panelHeight: 12 + 40 + 12 + (root.pendingSsid.length > 0 ? 92 + 12 : 0) + root.contentHeight() + 12
+    readonly property real panelHeight: 12 + 40 + 12 + (root.pendingSsid.length > 0 ? 92 + 12 : 0) + root.listHeight() + 12
 
     ScriptModel {
         id: wifiModel
@@ -122,11 +123,7 @@ Item {
     }
 
     function wifiIcon(n) {
-        const s = Math.round((n.signalStrength || 0) * 100)
-        if (s <= 25) return "\uf091f"
-        if (s <= 50) return "\uf0922"
-        if (s <= 75) return "\uf0926"
-        return "\uf0928"
+        return "\uf1eb"
     }
 
     function wifiIsSecure(n) {
@@ -464,12 +461,31 @@ Item {
 
             Item {
                 width: parent.width
-                height: root.contentHeight()
+                height: root.listHeight()
                 clip: true
 
-                Column {
+                Flickable {
+                    id: networkList
                     anchors.fill: parent
-                    spacing: root.rowSpacing
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    contentWidth: width
+                    contentHeight: networkColumn.implicitHeight
+
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                        width: 6
+                        background: Rectangle { color: "transparent" }
+                        contentItem: Rectangle {
+                            radius: 3
+                            color: "#3A352C"
+                        }
+                    }
+
+                    Column {
+                        id: networkColumn
+                        width: networkList.width
+                        spacing: root.rowSpacing
 
                     Repeater {
                         model: root.isWifi ? wifiModel : []
@@ -687,6 +703,7 @@ Item {
                         font.pixelSize: 12
                     }
                 }
+                }
             }
         }
     }
@@ -701,19 +718,25 @@ Item {
         return n * root.rowH + (n - 1) * root.rowSpacing
     }
 
+    readonly property real maxListH: 340
+
     function contentHeight() {
         if (root.isWifi) {
             const list = root.sortedWifi()
             let h = Math.max(1, list.length) * root.rowH + Math.max(0, list.length - 1) * root.rowSpacing
             if (root.statusText.length > 0) h += 16 + root.rowSpacing
             if (list.length === 0) h = 52
-            return Math.min(360, h)
+            return h
         }
         let h = 52
         for (let i = 0; i < 3; i++) {
             const n = root.btDevices(i).length
             if (n > 0) h += 22 + n * root.rowH + (n - 1) * root.rowSpacing + root.rowSpacing
         }
-        return Math.min(360, h)
+        return h
+    }
+
+    function listHeight() {
+        return Math.min(root.maxListH, Math.max(52, root.contentHeight()))
     }
 }
